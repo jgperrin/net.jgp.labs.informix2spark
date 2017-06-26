@@ -27,9 +27,6 @@ public class CustomerLoader {
         .getOrCreate();
     // @formatter:on
 
-    JdbcDialect dialect = new InformixJdbcDialect();
-    JdbcDialects.registerDialect(dialect);
-
     Config config = ConfigManager.getConfig(K.INFORMIX);
 
     // @formatter:off
