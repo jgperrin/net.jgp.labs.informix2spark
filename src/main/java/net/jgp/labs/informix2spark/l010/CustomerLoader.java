@@ -6,7 +6,10 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.jdbc.JdbcDialect;
 import org.apache.spark.sql.jdbc.JdbcDialects;
 
+import net.jgp.labs.informix2spark.utils.Config;
+import net.jgp.labs.informix2spark.utils.ConfigManager;
 import net.jgp.labs.informix2spark.utils.InformixJdbcDialect;
+import net.jgp.labs.informix2spark.utils.K;
 
 public class CustomerLoader {
 
@@ -21,32 +24,23 @@ public class CustomerLoader {
 		JdbcDialect dialect = new InformixJdbcDialect();
 		JdbcDialects.registerDialect(dialect);
 
-		String hostname = "[::1]";
-		int port = 33378;
-		String user = "informix";
-		String password = "in4mix";
-		String database = "stores_demo";
-		String informixServer = "lo_informix1210";
-		String jdbcUrl = "jdbc:informix-sqli://" + hostname + ":" + port + "/" + database + ":INFORMIXSERVER="
-				+ informixServer;
-		String table = "informix.customer";
-		String driver = "com.informix.jdbc.IfxDriver";
+		Config config = ConfigManager.getConfig(K.INFORMIX);
 
 		// @formatter:off
 		Dataset<Row> df = spark
 				.read()
 				.format("jdbc")
-				.option("url", jdbcUrl)
-				.option("dbtable", table)
-				.option("user", user)
-				.option("password", password)
-				.option("driver", driver)
+				.option("url", config.getJdbcUrl())
+				.option("dbtable", config.getTable())
+				.option("user", config.getUser())
+				.option("password", config.getPassword())
+				.option("driver", config.getDriver())
 				.load();
 		// @formatter:on
 
 		df.cache();
 		df.printSchema();
-		System.out.println("Number of rows in " + table + ": " + df.count());
+		System.out.println("Number of rows in " + config.getTable() + ": " + df.count());
 		df.show();
 	}
 }

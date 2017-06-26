@@ -6,11 +6,11 @@
 	<packaging>jar</packaging>
 	<version>1.0.0-SNAPSHOT</version>
 	<name>informix2spark</name>
-	
-	
+
+
 	<properties>
-		<scala.version>2.10</scala.version>
-		<spark.version>2.0.0</spark.version>
+		<scala.version>2.11</scala.version>
+		<spark.version>2.1.1</spark.version>
 		<informix-jdbc.version>4.10.8.1</informix-jdbc.version>
 	</properties>
 
@@ -36,12 +36,17 @@
 			<version>${informix-jdbc.version}</version>
 		</dependency>
 		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+			<version>6.0.6</version>
+		</dependency>
+		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>3.8.1</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
-	
+
 	<url>https://github.com/jgperrin/net.jgp.labs.informix2spark</url>
 </project>
