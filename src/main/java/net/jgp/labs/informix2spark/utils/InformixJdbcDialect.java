@@ -42,6 +42,9 @@ public class InformixJdbcDialect extends JdbcDialect {
     return url.startsWith("jdbc:informix-sqli");
   }
 
+  /**
+   * Processes specific JDBC types for Catalyst.
+   */
   @Override
   public Option<DataType> getCatalystType(int sqlType,
       String typeName, int size, MetadataBuilder md) {
@@ -69,7 +72,8 @@ public class InformixJdbcDialect extends JdbcDialect {
     if (typeName.toLowerCase().compareTo("st_point") == 0) {
       return Option.apply(DataTypes.BinaryType);
     }
-    if (typeName.toLowerCase().compareTo("tspartitiondesc_t") == 0) {
+    if (typeName.toLowerCase().compareTo(
+        "tspartitiondesc_t") == 0) {
       return Option.apply(DataTypes.BinaryType);
     }
     return Option.empty();

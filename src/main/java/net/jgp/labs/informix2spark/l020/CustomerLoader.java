@@ -3,12 +3,9 @@ package net.jgp.labs.informix2spark.l020;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.jdbc.JdbcDialect;
-import org.apache.spark.sql.jdbc.JdbcDialects;
 
 import net.jgp.labs.informix2spark.utils.Config;
 import net.jgp.labs.informix2spark.utils.ConfigManager;
-import net.jgp.labs.informix2spark.utils.InformixJdbcDialect;
 import net.jgp.labs.informix2spark.utils.K;
 
 public class CustomerLoader {

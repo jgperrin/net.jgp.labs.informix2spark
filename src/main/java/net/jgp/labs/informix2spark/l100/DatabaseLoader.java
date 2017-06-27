@@ -31,7 +31,7 @@ public class DatabaseLoader {
     // @formatter:off
     SparkSession spark = SparkSession
         .builder()
-        .appName("Stores Customer")
+        .appName("Stores Data")
         .master("local")
         .getOrCreate();
     // @formatter:on
@@ -44,8 +44,7 @@ public class DatabaseLoader {
     }
 
     // List of all tables
-    List<String> tables = getTables(connection, config
-        .getDatabase());
+    List<String> tables = getTables(connection);
     if (tables.isEmpty()) {
       return;
     }
@@ -80,7 +79,7 @@ public class DatabaseLoader {
     df.printSchema();
     System.out.println("Number of rows in state: " + df
         .count());
-    df.show();
+    df.show(5);
   }
 
   /**
@@ -89,8 +88,7 @@ public class DatabaseLoader {
    * @param database
    * @return
    */
-  private List<String> getTables(Connection connection,
-      String database) {
+  private List<String> getTables(Connection connection) {
     List<String> tables = new ArrayList<>();
     DatabaseMetaData md;
     try {
