@@ -106,7 +106,7 @@ public class UnsoldProductsApp {
     // @formatter:on
     allDf.cache();
     allDf.printSchema();
-    allDf.show();
+    allDf.show(5);
 
     List<String> columnsToDrop = new ArrayList<>();
     columnsToDrop.add("zipcode");
@@ -134,8 +134,12 @@ public class UnsoldProductsApp {
     columnsToDrop.add("quantity");
     columnsToDrop.add("total_price");
 
-    Dataset<Row> unsoldProductsDf = allDf.filter("order_num IS NULL").filter(
-        "description IS NOT NULL").drop(JavaConversions.asScalaBuffer(columnsToDrop));
+    // @formatter:off
+    Dataset<Row> unsoldProductsDf = allDf
+        .drop(JavaConversions.asScalaBuffer(columnsToDrop))
+        .filter("order_num IS NULL")
+        .filter("description IS NOT NULL");
+    // @formatter:on
     unsoldProductsDf.cache();
     System.out.println("We have " + unsoldProductsDf.count()
         + " unsold references in our warehouse, time to do something!");
