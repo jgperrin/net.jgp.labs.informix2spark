@@ -4,29 +4,34 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
-public class MedianRevenueInYourZipCode {
+public class HouseholdsAboveMedianRevenuePerZipApp {
 
   public static void main(String[] args) {
-    System.out.println("Working directory = " + System
-        .getProperty("user.dir"));
-    MedianRevenueInYourZipCode app =
-        new MedianRevenueInYourZipCode();
+    HouseholdsAboveMedianRevenuePerZipApp app = new HouseholdsAboveMedianRevenuePerZipApp();
     app.start(90011);
   }
 
   private void start(int zip) {
-    SparkSession spark = SparkSession.builder().appName(
-        "Median Revenue in your ZIP Code™").master("local")
+    // @formatter:off
+    SparkSession spark = SparkSession
+        .builder()
+        .appName("Median Revenue in your ZIP Code™")
+        .master("local")
         .getOrCreate();
+    // @formatter:on
 
-    String filename = "data/14zpallagi.csv";
-    Dataset<Row> df = spark.read().format("csv").option(
-        "inferSchema", "true").option("header", "true")
+    String filename = "data/14zpallagi*.csv";
+    // @formatter:off
+    Dataset<Row> df = spark
+        .read()
+        .format("csv")
+        .option("inferSchema", "true")
+        .option("header", "true")
         .load(filename);
+    // @formatter:on
     df.show();
 
-    Dataset<Row> df2 = df.filter(df.col("zipcode").equalTo(
-        zip));
+    Dataset<Row> df2 = df.filter(df.col("zipcode").equalTo(zip));
     df2 = df2.drop("STATEFIPS");
     df2 = df2.drop("mars1");
     df2 = df2.drop("MARS2");
@@ -149,9 +154,10 @@ public class MedianRevenueInYourZipCode {
     df2 = df2.drop("A11901");
     df2 = df2.drop("N11902");
     df2 = df2.drop("A11902");
+    
     df2 = df2.withColumn("cnt", df2.col("N1").multiply(df2.col("agi_stub")));
     df2 = df2.filter(df2.col("agi_stub").$greater(3));
-    df2 = df2.groupBy("zipcode").sum("cnt").as("households");
+    df2 = df2.groupBy("zipcode").sum("cnt").withColumnRenamed("sum(cnt)", "households");
     df2.show();
   }
 }
