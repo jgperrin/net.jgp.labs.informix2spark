@@ -1,14 +1,15 @@
 package net.jgp.labs.informix2spark.l420;
 
-import static org.apache.spark.sql.functions.*;
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.datediff;
+import static org.apache.spark.sql.functions.lit;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -20,204 +21,131 @@ import net.jgp.labs.informix2spark.utils.Config;
 import net.jgp.labs.informix2spark.utils.ConfigManager;
 import net.jgp.labs.informix2spark.utils.InformixJdbcDialect;
 import net.jgp.labs.informix2spark.utils.K;
-
 import scala.collection.JavaConversions;
 import scala.collection.Seq;
 
-public class SalesTarget {
+public class SalesTargetApp {
 
   SparkSession spark;
 
   public static void main(String[] args) {
-    SalesTarget app = new SalesTarget();
+    SalesTargetApp app = new SalesTargetApp();
     app.start();
   }
 
-  private void start() {
+  public SalesTargetApp() {
     init();
-
-    Dataset<Row> householdDf = getHouseholdDataframe();
-    Dataset<Row> populationDf = getPopulationDataframe();
-    Dataset<Row> indexDf = joinHouseholdPopulation(
-        householdDf, populationDf);
-    Dataset<Row> salesDf = getSalesData();
-
-    Dataset<Row> salesIndexDf = salesDf.join(indexDf,
-        salesDf.col("zipcode").equalTo(indexDf.col(
-            "zipcode")), "left").drop(indexDf.col(
-                "zipcode")).orderBy(col("revenue").desc());
-    salesIndexDf.show();
   }
 
   private void init() {
-    // @formatter:off
     this.spark = SparkSession
         .builder()
-        .appName("Stores Data")
+        .appName("Sales Target")
         .master("local")
         .getOrCreate();
-    // @formatter:on
+  }
+
+  private void start() {
+    Dataset<Row> householdDf = getHouseholdDataframe();
+    Dataset<Row> populationDf = getPopulationDataframe();
+    Dataset<Row> indexDf = joinHouseholdPopulation(householdDf, populationDf);
+    Dataset<Row> salesDf = getSalesData();
+
+    Dataset<Row> salesIndexDf = salesDf
+        .join(indexDf, salesDf.col("zipcode").equalTo(indexDf.col("zipcode")), "left")
+        .drop(indexDf.col("zipcode"));
+    salesIndexDf = salesIndexDf.withColumn("revenue_by_inh", salesIndexDf.col("revenue")
+        .divide(salesIndexDf.col("pop")));
+    salesIndexDf = salesIndexDf.orderBy(col("revenue_by_inh").desc());
+    Row bestRow = salesIndexDf.first();
+    double bestRevenuePerInhabitant = ((BigDecimal) bestRow.getAs("revenue_by_inh"))
+        .doubleValue();
+    int populationOfBestRevenuePerInhabitant = bestRow.getAs("pop");
+    double incomeOfBestRevenuePerInhabitant = bestRow.getAs("income_per_inh");
+    salesIndexDf = salesIndexDf.withColumn(
+        "best_revenue_per_inh",
+        salesIndexDf.col("pop").divide(salesIndexDf.col("pop"))
+            .multiply(bestRevenuePerInhabitant));
+    salesIndexDf = salesIndexDf.withColumn(
+        "pop_of_best",
+        lit(populationOfBestRevenuePerInhabitant));
+    salesIndexDf = salesIndexDf.withColumn(
+        "income_of_best",
+        lit(incomeOfBestRevenuePerInhabitant));
+    salesIndexDf = salesIndexDf.withColumn(
+        "idx_revenue",
+        salesIndexDf.col("best_revenue_per_inh")
+            .divide(salesIndexDf.col("revenue_by_inh")));
+    salesIndexDf = salesIndexDf.withColumn(
+        "idx_pop",
+        salesIndexDf.col("pop").divide(salesIndexDf.col("pop_of_best")));
+    salesIndexDf = salesIndexDf.withColumn(
+        "idx_income",
+        salesIndexDf.col("income_per_inh").divide(salesIndexDf.col(
+            "income_of_best")));
+    salesIndexDf = salesIndexDf.withColumn(
+        "index",
+        salesIndexDf.col("idx_revenue").multiply(salesIndexDf.col("idx_pop")
+            .multiply(salesIndexDf.col("idx_income"))));
+    salesIndexDf = salesIndexDf.withColumn(
+        "potential_revenue",
+        salesIndexDf.col("revenue").multiply(salesIndexDf.col("index")));
+    salesIndexDf = salesIndexDf
+        .drop("idx_income")
+        .drop("idx_pop")
+        .drop("idx_revenue")
+        .drop("income_of_best")
+        .drop("pop_of_best")
+        .drop("best_revenue_per_inh")
+        .orderBy(salesIndexDf.col("potential_revenue").desc());
+    salesIndexDf.show();
+    System.out.println("Max revenue per inhabitant: $" + bestRevenuePerInhabitant
+        + "/inh");
   }
 
   private Dataset<Row> getPopulationDataframe() {
-    String filename =
-        "data/2010+Census+Population+By+Zipcode+(ZCTA).csv";
-    Dataset<Row> df = spark.read().format("csv").option(
-        "inferSchema", "true").option("header", "true")
+    String filename = "data/2010+Census+Population+By+Zipcode+(ZCTA).csv";
+    Dataset<Row> df = spark.read().format("csv")
+        .option("inferSchema", "true")
+        .option("header", "true")
         .load(filename);
     df = df.withColumnRenamed("Zip Code ZCTA", "zipcode");
-    df = df.withColumnRenamed("2010 Census Population",
-        "pop");
+    df = df.withColumnRenamed("2010 Census Population", "pop");
     df.show();
     return df;
   }
 
   private Dataset<Row> getHouseholdDataframe() {
-    String filename = "data/14zpallagi.csv";
-    Dataset<Row> df = spark.read().format("csv").option(
-        "inferSchema", "true").option("header", "true")
-        .load(filename);
+    String filename = "data/14zpallagi*.csv";
+    Dataset<Row> df = spark.read().format("csv")
+        .option("inferSchema", "true")
+        .option("header", "true").load(filename);
 
-    Dataset<Row> df2 = df.withColumn("cnt", df.col("N1")
-        .multiply(df.col("agi_stub")));
-    df2 = df2.drop("STATEFIPS");
-    df2 = df2.drop("mars1");
-    df2 = df2.drop("MARS2");
-    df2 = df2.drop("MARS4");
-    df2 = df2.drop("PREP");
-    df2 = df2.drop("N2");
-    df2 = df2.drop("NUMDEP");
-    df2 = df2.drop("TOTAL_VITA");
-    df2 = df2.drop("VITA");
-    df2 = df2.drop("TCE");
-    df2 = df2.drop("A00100");
-    df2 = df2.drop("N02650");
-    df2 = df2.drop("N00200");
-    df2 = df2.drop("A00200");
-    df2 = df2.drop("N00300");
-    df2 = df2.drop("A00300");
-    df2 = df2.drop("N00600");
-    df2 = df2.drop("A00600");
-    df2 = df2.drop("N00650");
-    df2 = df2.drop("A00650");
-    df2 = df2.drop("N00700");
-    df2 = df2.drop("A00700");
-    df2 = df2.drop("N00900");
-    df2 = df2.drop("A00900");
-    df2 = df2.drop("N01000");
-    df2 = df2.drop("A01000");
-    df2 = df2.drop("N01400");
-    df2 = df2.drop("A01400");
-    df2 = df2.drop("N01700");
-    df2 = df2.drop("A01700");
-    df2 = df2.drop("SCHF");
-    df2 = df2.drop("N02300");
-    df2 = df2.drop("A02300");
-    df2 = df2.drop("N02500");
-    df2 = df2.drop("A02500");
-    df2 = df2.drop("N26270");
-    df2 = df2.drop("A26270");
-    df2 = df2.drop("N02900");
-    df2 = df2.drop("A02900");
-    df2 = df2.drop("N03220");
-    df2 = df2.drop("A03220");
-    df2 = df2.drop("N03300");
-    df2 = df2.drop("A03300");
-    df2 = df2.drop("N03270");
-    df2 = df2.drop("A03270");
-    df2 = df2.drop("N03150");
-    df2 = df2.drop("A03150");
-    df2 = df2.drop("N03210");
-    df2 = df2.drop("A03210");
-    df2 = df2.drop("N03230");
-    df2 = df2.drop("A03230");
-    df2 = df2.drop("N03240");
-    df2 = df2.drop("A03240");
-    df2 = df2.drop("N04470");
-    df2 = df2.drop("A04470");
-    df2 = df2.drop("A00101");
-    df2 = df2.drop("N18425");
-    df2 = df2.drop("A18425");
-    df2 = df2.drop("N18450");
-    df2 = df2.drop("A18450");
-    df2 = df2.drop("N18500");
-    df2 = df2.drop("A18500");
-    df2 = df2.drop("N18300");
-    df2 = df2.drop("A18300");
-    df2 = df2.drop("N19300");
-    df2 = df2.drop("A19300");
-    df2 = df2.drop("N19700");
-    df2 = df2.drop("A19700");
-    df2 = df2.drop("N04800");
-    df2 = df2.drop("A04800");
-    df2 = df2.drop("N05800");
-    df2 = df2.drop("A05800");
-    df2 = df2.drop("N09600");
-    df2 = df2.drop("A09600");
-    df2 = df2.drop("N05780");
-    df2 = df2.drop("A05780");
-    df2 = df2.drop("N07100");
-    df2 = df2.drop("A07100");
-    df2 = df2.drop("N07300");
-    df2 = df2.drop("A07300");
-    df2 = df2.drop("N07180");
-    df2 = df2.drop("A07180");
-    df2 = df2.drop("N07230");
-    df2 = df2.drop("A07230");
-    df2 = df2.drop("N07240");
-    df2 = df2.drop("A07240");
-    df2 = df2.drop("N07220");
-    df2 = df2.drop("A07220");
-    df2 = df2.drop("N07260");
-    df2 = df2.drop("A07260");
-    df2 = df2.drop("N09400");
-    df2 = df2.drop("A09400");
-    df2 = df2.drop("N85770");
-    df2 = df2.drop("A85770");
-    df2 = df2.drop("N85775");
-    df2 = df2.drop("A85775");
-    df2 = df2.drop("N09750");
-    df2 = df2.drop("A09750");
-    df2 = df2.drop("N10600");
-    df2 = df2.drop("A10600");
-    df2 = df2.drop("N59660");
-    df2 = df2.drop("A59660");
-    df2 = df2.drop("N59720");
-    df2 = df2.drop("A59720");
-    df2 = df2.drop("N11070");
-    df2 = df2.drop("A11070");
-    df2 = df2.drop("N10960");
-    df2 = df2.drop("A10960");
-    df2 = df2.drop("N11560");
-    df2 = df2.drop("A11560");
-    df2 = df2.drop("N06500");
-    df2 = df2.drop("A06500");
-    df2 = df2.drop("N10300");
-    df2 = df2.drop("A10300");
-    df2 = df2.drop("N85530");
-    df2 = df2.drop("A85530");
-    df2 = df2.drop("N85300");
-    df2 = df2.drop("A85300");
-    df2 = df2.drop("N11901");
-    df2 = df2.drop("A11901");
-    df2 = df2.drop("N11902");
-    df2 = df2.drop("A11902");
-    df2 = df2.filter(df2.col("agi_stub").$greater(3));
-    df2 = df2.groupBy("zipcode").sum("cnt");
-    df2 = df2.withColumnRenamed("sum(cnt)", "household");
-    df2.show();
+    df = df.select(
+        df.col("zipcode"),
+        df.col("agi_stub"),
+        df.col("N1"),
+        df.col("A02650"),
+        df.col("N1").multiply(df.col("A02650")));
+    df = df.withColumnRenamed(df.columns()[df.columns().length - 1], "r");
+    df = df.groupBy("zipcode").sum("r");
+    df = df.withColumnRenamed(df.columns()[df.columns().length - 1], "total_income");
 
-    return df2;
+    return df;
   }
 
-  private Dataset<Row> joinHouseholdPopulation(Dataset<
-      Row> householdDf, Dataset<Row> populationDf) {
-    Dataset<Row> df = householdDf.join(populationDf,
-        householdDf.col("zipcode").equalTo(populationDf.col(
-            "zipcode")), "outer").drop(populationDf.col(
-                "zipcode"));
-    df = df.withColumn("idx", df.col("household").divide(df
-        .col("pop")));
+  private Dataset<Row> joinHouseholdPopulation(
+      Dataset<Row> householdDf,
+      Dataset<Row> populationDf) {
+    Dataset<Row> df = householdDf
+        .join(
+            populationDf,
+            householdDf.col("zipcode").equalTo(populationDf.col("zipcode")),
+            "outer")
+        .drop(populationDf.col("zipcode"))
+        .withColumn(
+            "income_per_inh",
+            householdDf.col("total_income").divide(populationDf.col("pop")));
     df.show();
     return df;
   }
@@ -231,7 +159,7 @@ public class SalesTarget {
     }
 
     // List of all tables we want to work with
-    List<String> tables = new ArrayList();
+    List<String> tables = new ArrayList<>();
     tables.add("customer");
     tables.add("orders");
     tables.add("items");

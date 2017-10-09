@@ -7,157 +7,57 @@ import org.apache.spark.sql.SparkSession;
 public class HouseholdsAboveMedianRevenuePerZipApp {
 
   public static void main(String[] args) {
-    HouseholdsAboveMedianRevenuePerZipApp app = new HouseholdsAboveMedianRevenuePerZipApp();
-    app.start(90011);
+    HouseholdsAboveMedianRevenuePerZipApp app =
+        new HouseholdsAboveMedianRevenuePerZipApp();
+    app.start(27514);
   }
 
   private void start(int zip) {
-    // @formatter:off
     SparkSession spark = SparkSession
         .builder()
-        .appName("Median Revenue in your ZIP Code™")
+        .appName("Number of households in your ZIP Code™")
         .master("local")
         .getOrCreate();
-    // @formatter:on
 
-    String filename = "data/14zpallagi*.csv";
-    // @formatter:off
+    String filename = "data/14zpallagi-part*.csv";
     Dataset<Row> df = spark
         .read()
         .format("csv")
         .option("inferSchema", "true")
         .option("header", "true")
         .load(filename);
-    // @formatter:on
-    df.show();
+    df.printSchema();
+    df.sample(true, 0.01, 4589).show(2);
+    System.out.println("Dataframe has " + df.count() + " rows and " + df.columns().length
+        + " columns.");
 
     Dataset<Row> df2 = df.filter(df.col("zipcode").equalTo(zip));
-    df2 = df2.drop("STATEFIPS");
-    df2 = df2.drop("mars1");
-    df2 = df2.drop("MARS2");
-    df2 = df2.drop("MARS4");
-    df2 = df2.drop("PREP");
-    df2 = df2.drop("N2");
-    df2 = df2.drop("NUMDEP");
-    df2 = df2.drop("TOTAL_VITA");
-    df2 = df2.drop("VITA");
-    df2 = df2.drop("TCE");
-    df2 = df2.drop("A00100");
-    df2 = df2.drop("N02650");
-    df2 = df2.drop("N00200");
-    df2 = df2.drop("A00200");
-    df2 = df2.drop("N00300");
-    df2 = df2.drop("A00300");
-    df2 = df2.drop("N00600");
-    df2 = df2.drop("A00600");
-    df2 = df2.drop("N00650");
-    df2 = df2.drop("A00650");
-    df2 = df2.drop("N00700");
-    df2 = df2.drop("A00700");
-    df2 = df2.drop("N00900");
-    df2 = df2.drop("A00900");
-    df2 = df2.drop("N01000");
-    df2 = df2.drop("A01000");
-    df2 = df2.drop("N01400");
-    df2 = df2.drop("A01400");
-    df2 = df2.drop("N01700");
-    df2 = df2.drop("A01700");
-    df2 = df2.drop("SCHF");
-    df2 = df2.drop("N02300");
-    df2 = df2.drop("A02300");
-    df2 = df2.drop("N02500");
-    df2 = df2.drop("A02500");
-    df2 = df2.drop("N26270");
-    df2 = df2.drop("A26270");
-    df2 = df2.drop("N02900");
-    df2 = df2.drop("A02900");
-    df2 = df2.drop("N03220");
-    df2 = df2.drop("A03220");
-    df2 = df2.drop("N03300");
-    df2 = df2.drop("A03300");
-    df2 = df2.drop("N03270");
-    df2 = df2.drop("A03270");
-    df2 = df2.drop("N03150");
-    df2 = df2.drop("A03150");
-    df2 = df2.drop("N03210");
-    df2 = df2.drop("A03210");
-    df2 = df2.drop("N03230");
-    df2 = df2.drop("A03230");
-    df2 = df2.drop("N03240");
-    df2 = df2.drop("A03240");
-    df2 = df2.drop("N04470");
-    df2 = df2.drop("A04470");
-    df2 = df2.drop("A00101");
-    df2 = df2.drop("N18425");
-    df2 = df2.drop("A18425");
-    df2 = df2.drop("N18450");
-    df2 = df2.drop("A18450");
-    df2 = df2.drop("N18500");
-    df2 = df2.drop("A18500");
-    df2 = df2.drop("N18300");
-    df2 = df2.drop("A18300");
-    df2 = df2.drop("N19300");
-    df2 = df2.drop("A19300");
-    df2 = df2.drop("N19700");
-    df2 = df2.drop("A19700");
-    df2 = df2.drop("N04800");
-    df2 = df2.drop("A04800");
-    df2 = df2.drop("N05800");
-    df2 = df2.drop("A05800");
-    df2 = df2.drop("N09600");
-    df2 = df2.drop("A09600");
-    df2 = df2.drop("N05780");
-    df2 = df2.drop("A05780");
-    df2 = df2.drop("N07100");
-    df2 = df2.drop("A07100");
-    df2 = df2.drop("N07300");
-    df2 = df2.drop("A07300");
-    df2 = df2.drop("N07180");
-    df2 = df2.drop("A07180");
-    df2 = df2.drop("N07230");
-    df2 = df2.drop("A07230");
-    df2 = df2.drop("N07240");
-    df2 = df2.drop("A07240");
-    df2 = df2.drop("N07220");
-    df2 = df2.drop("A07220");
-    df2 = df2.drop("N07260");
-    df2 = df2.drop("A07260");
-    df2 = df2.drop("N09400");
-    df2 = df2.drop("A09400");
-    df2 = df2.drop("N85770");
-    df2 = df2.drop("A85770");
-    df2 = df2.drop("N85775");
-    df2 = df2.drop("A85775");
-    df2 = df2.drop("N09750");
-    df2 = df2.drop("A09750");
-    df2 = df2.drop("N10600");
-    df2 = df2.drop("A10600");
-    df2 = df2.drop("N59660");
-    df2 = df2.drop("A59660");
-    df2 = df2.drop("N59720");
-    df2 = df2.drop("A59720");
-    df2 = df2.drop("N11070");
-    df2 = df2.drop("A11070");
-    df2 = df2.drop("N10960");
-    df2 = df2.drop("A10960");
-    df2 = df2.drop("N11560");
-    df2 = df2.drop("A11560");
-    df2 = df2.drop("N06500");
-    df2 = df2.drop("A06500");
-    df2 = df2.drop("N10300");
-    df2 = df2.drop("A10300");
-    df2 = df2.drop("N85530");
-    df2 = df2.drop("A85530");
-    df2 = df2.drop("N85300");
-    df2 = df2.drop("A85300");
-    df2 = df2.drop("N11901");
-    df2 = df2.drop("A11901");
-    df2 = df2.drop("N11902");
-    df2 = df2.drop("A11902");
-    
-    df2 = df2.withColumn("cnt", df2.col("N1").multiply(df2.col("agi_stub")));
-    df2 = df2.filter(df2.col("agi_stub").$greater(3));
-    df2 = df2.groupBy("zipcode").sum("cnt").withColumnRenamed("sum(cnt)", "households");
+    String[] colsToDrop = { "STATEFIPS", "mars1", "MARS2", "MARS4", "PREP", "N2",
+        "NUMDEP", "TOTAL_VITA", "VITA", "TCE", "A00100", "N02650", "N00200", "A00200",
+        "N00300", "A00300", "N00600", "A00600", "N00650", "A00650", "N00700", "A00700",
+        "N00900", "A00900", "N01000", "A01000", "N01400", "A01400", "N01700", "A01700",
+        "SCHF", "N02300", "A02300", "N02500", "A02500", "N26270", "A26270", "N02900",
+        "A02900", "N03220", "A03220", "N03300", "A03300", "N03270", "A03270", "N03150",
+        "A03150", "N03210", "A03210", "N03230", "A03230", "N03240", "A03240", "N04470",
+        "A04470", "A00101", "N18425", "A18425", "N18450", "A18450", "N18500", "A18500",
+        "N18300", "A18300", "N19300", "A19300", "N19700", "A19700", "N04800", "A04800",
+        "N05800", "A05800", "N09600", "A09600", "N05780", "A05780", "N07100", "A07100",
+        "N07300", "A07300", "N07180", "A07180", "N07230", "A07230", "N07240", "A07240",
+        "N07220", "A07220", "N07260", "A07260", "N09400", "A09400", "N85770", "A85770",
+        "N85775", "A85775", "N09750", "A09750", "N10600", "A10600", "N59660", "A59660",
+        "N59720", "A59720", "N11070", "A11070", "N10960", "A10960", "N11560", "A11560",
+        "N06500", "A06500", "N10300", "A10300", "N85530", "A85530", "N85300", "A85300",
+        "N11901", "A11901", "N11902", "A11902" };
+    for (String colName : colsToDrop) {
+      df2 = df2.drop(colName);
+    }
+    df2.printSchema();
     df2.show();
+    System.out.println("Dataframe has " + df2.count() + " rows and " + df2
+        .columns().length + " columns.");
+
+    Dataset<Row> df3 = df2.filter(df2.col("agi_stub").$greater(3));
+    df3 = df3.groupBy("zipcode").sum("N1").withColumnRenamed("sum(N1)", "households");
+    df3.show();
   }
 }
