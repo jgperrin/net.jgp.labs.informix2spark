@@ -28,11 +28,6 @@ public class SalesTargetApp {
 
   SparkSession spark;
 
-  public static void main(String[] args) {
-    SalesTargetApp app = new SalesTargetApp();
-    app.start();
-  }
-
   public SalesTargetApp() {
     init();
   }
@@ -43,6 +38,11 @@ public class SalesTargetApp {
         .appName("Sales Target")
         .master("local")
         .getOrCreate();
+  }
+
+  public static void main(String[] args) {
+    SalesTargetApp app = new SalesTargetApp();
+    app.start();
   }
 
   private void start() {
@@ -81,8 +81,7 @@ public class SalesTargetApp {
         salesIndexDf.col("pop").divide(salesIndexDf.col("pop_of_best")));
     salesIndexDf = salesIndexDf.withColumn(
         "idx_income",
-        salesIndexDf.col("income_per_inh").divide(salesIndexDf.col(
-            "income_of_best")));
+        salesIndexDf.col("income_per_inh").divide(salesIndexDf.col("income_of_best")));
     salesIndexDf = salesIndexDf.withColumn(
         "index",
         salesIndexDf.col("idx_revenue").multiply(salesIndexDf.col("idx_pop")
@@ -95,12 +94,12 @@ public class SalesTargetApp {
         .drop("idx_pop")
         .drop("idx_revenue")
         .drop("income_of_best")
+        .drop("total_income")
+        .drop("revenue_by_inh")
         .drop("pop_of_best")
         .drop("best_revenue_per_inh")
         .orderBy(salesIndexDf.col("potential_revenue").desc());
     salesIndexDf.show();
-    System.out.println("Max revenue per inhabitant: $" + bestRevenuePerInhabitant
-        + "/inh");
   }
 
   private Dataset<Row> getPopulationDataframe() {
@@ -111,7 +110,6 @@ public class SalesTargetApp {
         .load(filename);
     df = df.withColumnRenamed("Zip Code ZCTA", "zipcode");
     df = df.withColumnRenamed("2010 Census Population", "pop");
-    df.show();
     return df;
   }
 
@@ -127,8 +125,8 @@ public class SalesTargetApp {
         df.col("N1"),
         df.col("A02650"),
         df.col("N1").multiply(df.col("A02650")));
-    df = df.withColumnRenamed(df.columns()[df.columns().length - 1], "r");
-    df = df.groupBy("zipcode").sum("r");
+    df = df.withColumnRenamed(df.columns()[df.columns().length - 1], "income");
+    df = df.groupBy("zipcode").sum("income");
     df = df.withColumnRenamed(df.columns()[df.columns().length - 1], "total_income");
 
     return df;
@@ -146,7 +144,6 @@ public class SalesTargetApp {
         .withColumn(
             "income_per_inh",
             householdDf.col("total_income").divide(populationDf.col("pop")));
-    df.show();
     return df;
   }
 
@@ -171,9 +168,7 @@ public class SalesTargetApp {
 
     Map<String, Dataset<Row>> datalake = new HashMap<>();
     for (String table : tables) {
-      System.out.print("Loading table [" + table
-          + "] ... ");
-      // @formatter:off
+      System.out.print("Loading table [" + table + "] ... ");
       Dataset<Row> df = spark.read()
           .format("jdbc")
           .option("url", config.getJdbcUrl())
@@ -182,7 +177,6 @@ public class SalesTargetApp {
           .option("password", config.getPassword())
           .option("driver", config.getDriver())
           .load();
-      // @formatter:on
 
       datalake.put(table, df);
       System.out.println("done");
@@ -191,34 +185,7 @@ public class SalesTargetApp {
     System.out.println("We have loaded " + datalake.size()
         + " table in our data lake");
 
-    // Let's look at the content
-    for (String table : tables) {
-      Dataset<Row> df = datalake.get(table);
-      System.out.println("Number of rows in " + table + ": "
-          + df.count());
-      df.show(10);
-      df.printSchema();
-    }
-
     Dataset<Row> ordersDf = datalake.get("orders");
-    // @formatter:off
-    ordersDf = ordersDf.withColumn(
-        "time_to_ship", 
-        datediff(ordersDf.col("ship_date"), ordersDf.col("order_date")));
-    // @formatter:on
-
-    ordersDf.printSchema();
-    ordersDf.show();
-    System.out.println("We have " + ordersDf.count()
-        + " orders");
-
-    Dataset<Row> ordersDf2 = ordersDf.filter(
-        "time_to_ship IS NOT NULL");
-    ordersDf2.printSchema();
-    ordersDf2.show();
-    System.out.println("We have " + ordersDf2.count()
-        + " delivered orders");
-
     Dataset<Row> customerDf = datalake.get("customer");
     Dataset<Row> itemsDf = datalake.get("items");
     Dataset<Row> stockDf = datalake.get("stock");
@@ -227,54 +194,18 @@ public class SalesTargetApp {
         new scala.collection.immutable.Set.Set2<>(
             "stock_num", "manu_code").toSeq();
 
-    // @formatter:off
     Dataset<Row> allDf = customerDf
-        .join(ordersDf, customerDf.col("customer_num").equalTo(ordersDf.col("customer_num")), "full_outer")
-        .join(itemsDf, ordersDf.col("order_num").equalTo(itemsDf.col("order_num")), "full_outer")
+        .join(
+            ordersDf,
+            customerDf.col("customer_num").equalTo(ordersDf.col("customer_num")),
+            "full_outer")
+        .join(itemsDf, ordersDf.col("order_num").equalTo(itemsDf.col("order_num")),
+            "full_outer")
         .join(stockDf, stockColumns, "full_outer")
         .drop(ordersDf.col("customer_num"))
         .drop(itemsDf.col("order_num"))
         .drop(stockDf.col("stock_num"))
         .drop(stockDf.col("manu_code"));
-    // @formatter:on
-    allDf.cache();
-    allDf.printSchema();
-    allDf.show();
-
-    List<String> columnsToDrop = new ArrayList<>();
-    columnsToDrop.add("zipcode");
-    columnsToDrop.add("phone");
-    columnsToDrop.add("customer_num");
-    columnsToDrop.add("fname");
-    columnsToDrop.add("lname");
-    columnsToDrop.add("company");
-    columnsToDrop.add("address1");
-    columnsToDrop.add("address2");
-    columnsToDrop.add("city");
-    columnsToDrop.add("state");
-    columnsToDrop.add("order_num");
-    columnsToDrop.add("order_date");
-    columnsToDrop.add("customer_num");
-    columnsToDrop.add("ship_instruct");
-    columnsToDrop.add("backlog");
-    columnsToDrop.add("po_num");
-    columnsToDrop.add("ship_date");
-    columnsToDrop.add("ship_weight");
-    columnsToDrop.add("ship_charge");
-    columnsToDrop.add("paid_date");
-    columnsToDrop.add("time_to_ship");
-    columnsToDrop.add("item_num");
-    columnsToDrop.add("quantity");
-    columnsToDrop.add("total_price");
-
-    Dataset<Row> unsoldProductsDf = allDf.filter(
-        "order_num IS NULL").filter(
-            "description IS NOT NULL").drop(JavaConversions
-                .asScalaBuffer(columnsToDrop));
-    unsoldProductsDf.cache();
-    System.out.println("We have " + unsoldProductsDf.count()
-        + " unsold references in our warehouse, time to do something!");
-    unsoldProductsDf.show();
 
     // Sales analysis
     Dataset<Row> salesDf = allDf.filter(
@@ -283,7 +214,7 @@ public class SalesTargetApp {
     salesDf = salesDf.withColumn("revenue", salesDf.col(
         "sum(total_price)")).drop("sum(total_price)")
         .filter("revenue IS NOT NULL");
-    salesDf.show();
+    salesDf.show(5);
     return salesDf;
   }
 }
