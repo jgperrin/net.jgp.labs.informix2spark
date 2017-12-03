@@ -1,5 +1,8 @@
 package net.jgp.labs.informix2spark.l500;
 
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.weekofyear;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,10 +22,10 @@ import scala.collection.JavaConversions;
 import scala.collection.Seq;
 import scala.collection.immutable.Set.Set2;
 
-public class OrdersPerDayApp {
+public class OrdersPerWeekApp {
 
   public static void main(String[] args) {
-    OrdersPerDayApp app = new OrdersPerDayApp();
+    OrdersPerWeekApp app = new OrdersPerWeekApp();
     app.start();
   }
 
@@ -32,7 +35,7 @@ public class OrdersPerDayApp {
     // @formatter:off
     spark = SparkSession
         .builder()
-        .appName("Sales per day")
+        .appName("Sales per week")
         .master("local")
         .getOrCreate();
     // @formatter:on
@@ -75,18 +78,20 @@ public class OrdersPerDayApp {
     Dataset<Row> ordersDf = datalake.get("orders");
     Dataset<Row> itemsDf = datalake.get("items");
 
-    // @formatter:off
+
     Dataset<Row> allDf = ordersDf
         .join(
-            itemsDf, 
-            ordersDf.col("order_num").equalTo(itemsDf.col("order_num")), 
+            itemsDf,
+            ordersDf.col("order_num").equalTo(itemsDf.col("order_num")),
             "full_outer")
         .drop(ordersDf.col("customer_num"))
         .drop(itemsDf.col("order_num"))
-        .groupBy(ordersDf.col("order_date"))
+        .withColumn("order_week", lit(weekofyear(ordersDf.col("order_date"))));
+    allDf = allDf
+        .groupBy(allDf.col("order_week"))
         .sum("total_price")
-        .orderBy(ordersDf.col("order_date"));
-    // @formatter:on
+        .orderBy(allDf.col("order_week"));
+
     allDf.cache();
     allDf.printSchema();
     allDf.show(50);

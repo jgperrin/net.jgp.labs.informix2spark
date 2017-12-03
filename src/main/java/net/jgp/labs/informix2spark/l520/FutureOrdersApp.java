@@ -1,10 +1,19 @@
 package net.jgp.labs.informix2spark.l520;
 
+import static org.apache.spark.sql.functions.*;
+
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.spark.ml.linalg.Vector;
+import org.apache.spark.ml.linalg.VectorUDT;
+import org.apache.spark.ml.linalg.Vectors;
+import org.apache.spark.ml.regression.LinearRegression;
+import org.apache.spark.ml.regression.LinearRegressionModel;
+import org.apache.spark.ml.regression.LinearRegressionTrainingSummary;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -15,9 +24,6 @@ import net.jgp.labs.informix2spark.utils.Config;
 import net.jgp.labs.informix2spark.utils.ConfigManager;
 import net.jgp.labs.informix2spark.utils.InformixJdbcDialect;
 import net.jgp.labs.informix2spark.utils.K;
-import scala.collection.JavaConversions;
-import scala.collection.Seq;
-import scala.collection.immutable.Set.Set2;
 
 public class FutureOrdersApp {
 
@@ -36,6 +42,7 @@ public class FutureOrdersApp {
         .master("local")
         .getOrCreate();
     // @formatter:on
+    spark.udf().register("vectorBuilder", new VectorBuilderInteger(), new VectorUDT());
 
     // List of all tables we want to work with
     List<String> tables = new ArrayList<>();
@@ -75,20 +82,59 @@ public class FutureOrdersApp {
     Dataset<Row> ordersDf = datalake.get("orders");
     Dataset<Row> itemsDf = datalake.get("items");
 
-    // @formatter:off
     Dataset<Row> allDf = ordersDf
         .join(
-            itemsDf, 
-            ordersDf.col("order_num").equalTo(itemsDf.col("order_num")), 
+            itemsDf,
+            ordersDf.col("order_num").equalTo(itemsDf.col("order_num")),
             "full_outer")
         .drop(ordersDf.col("customer_num"))
         .drop(itemsDf.col("order_num"))
-        .groupBy(ordersDf.col("order_date"))
+        .withColumn("order_week", lit(weekofyear(ordersDf.col("order_date"))));
+    allDf = allDf
+        .groupBy(allDf.col("order_week"))
         .sum("total_price")
-        .orderBy(ordersDf.col("order_date"));
-    // @formatter:on
+        .orderBy(allDf.col("order_week"));
+
     allDf.cache();
     allDf.printSchema();
-    allDf.show(50);
+    allDf.show(10);
+
+    Dataset<Row> df = allDf.withColumn(
+        "values_for_features", allDf.col("order_week"));
+    df = df.withColumn("label", df.col("sum(total_price)"));
+    df = df.withColumn("features",
+        callUDF("vectorBuilder", df.col("values_for_features")));
+    df.printSchema();
+    df.show();
+
+    LinearRegression lr = new LinearRegression().setMaxIter(20);
+
+    // Fit the model to the data.
+    LinearRegressionModel model = lr.fit(df);
+
+    // Given a dataset, predict each point's label, and show the results.
+    model.transform(df).show();
+
+    LinearRegressionTrainingSummary trainingSummary = model.summary();
+    System.out.println("numIterations: " + trainingSummary.totalIterations());
+    System.out.println("objectiveHistory: " +
+        Vectors.dense(trainingSummary.objectiveHistory()));
+    trainingSummary.residuals().show();
+    System.out.println("RMSE: " + trainingSummary.rootMeanSquaredError());
+    System.out.println("r2: " + trainingSummary.r2());
+
+    double intercept = model.intercept();
+    System.out.println("Interesection: " + intercept);
+    double regParam = model.getRegParam();
+    System.out.println("Regression parameter: " + regParam);
+    double tol = model.getTol();
+    System.out.println("Tol: " + tol);
+
+    for (double feature = 31.0; feature < 34; feature++) {
+      Vector features = Vectors.dense(feature);
+      double p = model.predict(features);
+
+      System.out.printf("Prediction for week #%d is $%4.2f.\n", Double.valueOf(feature).intValue(), p);
+    }
   }
 }
