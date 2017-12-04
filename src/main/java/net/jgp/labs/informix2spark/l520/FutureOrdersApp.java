@@ -124,7 +124,7 @@ public class FutureOrdersApp {
     System.out.println("r2: " + trainingSummary.r2());
 
     double intercept = model.intercept();
-    System.out.println("Interesection: " + intercept);
+    System.out.println("Intersection: " + intercept);
     double regParam = model.getRegParam();
     System.out.println("Regression parameter: " + regParam);
     double tol = model.getTol();
@@ -134,8 +134,9 @@ public class FutureOrdersApp {
       Vector features = Vectors.dense(feature);
       double p = model.predict(features);
 
-      System.out.printf("Prediction for week #%d is $%4.2f.\n", Double.valueOf(feature)
-          .intValue(), p);
+      System.out.printf("Total orders prediction for week #%d is $%4.2f.\n",
+          Double.valueOf(feature).intValue(), 
+          p);
     }
   }
 }
