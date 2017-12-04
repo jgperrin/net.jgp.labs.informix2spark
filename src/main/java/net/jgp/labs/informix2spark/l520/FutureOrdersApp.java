@@ -99,11 +99,11 @@ public class FutureOrdersApp {
     allDf.printSchema();
     allDf.show(10);
 
-    Dataset<Row> df = allDf.withColumn(
-        "values_for_features", allDf.col("order_week"));
-    df = df.withColumn("label", df.col("sum(total_price)"));
-    df = df.withColumn("features",
-        callUDF("vectorBuilder", df.col("values_for_features")));
+    Dataset<Row> df = allDf
+        .withColumn("values_for_features", allDf.col("order_week"))
+        .withColumn("label", allDf.col("sum(total_price)"))
+        .withColumn("features", callUDF("vectorBuilder", col("values_for_features")))
+        .drop(col("values_for_features"));
     df.printSchema();
     df.show();
 
@@ -134,7 +134,8 @@ public class FutureOrdersApp {
       Vector features = Vectors.dense(feature);
       double p = model.predict(features);
 
-      System.out.printf("Prediction for week #%d is $%4.2f.\n", Double.valueOf(feature).intValue(), p);
+      System.out.printf("Prediction for week #%d is $%4.2f.\n", Double.valueOf(feature)
+          .intValue(), p);
     }
   }
 }
