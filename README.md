@@ -46,7 +46,7 @@ Link:
 [https://www.ibm.com/developerworks/opensource/library/ba-offloading-informix-data-spark-4/index.html][4]
 
 Code:
-All code is in the net.jgp.labs.informix2spark.l3xx packages.
+All code is in the net.jgp.labs.informix2spark.l4xx packages.
 
 ## Part 5: Machine learning to the rescue
 
@@ -57,7 +57,7 @@ Link:
 [https://www.ibm.com/developerworks/opensource/library/ba-offloading-informix-data-spark-5/index.html][5]
 
 Code:
-All code is in the net.jgp.labs.informix2spark.l3xx packages.
+All code is in the net.jgp.labs.informix2spark.l5xx packages.
 
 
 [1]: https://www.ibm.com/developerworks/library/ba-offloading-informix-data-spark/index.html
