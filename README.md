@@ -32,12 +32,38 @@ Scope:
 **Going deeper in the dataframe API to start doing joins and more complex analytics.**
 
 Link:
-TBD
+[https://www.ibm.com/developerworks/opensource/library/ba-offloading-informix-data-spark-3/index.html][3]
+
+Code:
+All code is in the net.jgp.labs.informix2spark.l3xx packages.
+
+## Part 4: Leverage data against other data sources
+
+Scope:
+**It's time to discover some of the power of Spark by adding two other (external) data sources.**
+
+Link:
+[https://www.ibm.com/developerworks/opensource/library/ba-offloading-informix-data-spark-4/index.html][4]
+
+Code:
+All code is in the net.jgp.labs.informix2spark.l3xx packages.
+
+## Part 5: Machine learning to the rescue
+
+Scope:
+**Machine Learning will help you extrapolate future orders.**
+
+Link:
+[https://www.ibm.com/developerworks/opensource/library/ba-offloading-informix-data-spark-5/index.html][5]
 
 Code:
 All code is in the net.jgp.labs.informix2spark.l3xx packages.
 
 
-
 [1]: https://www.ibm.com/developerworks/library/ba-offloading-informix-data-spark/index.html
 [2]: https://www.ibm.com/developerworks/opensource/library/ba-offloading-informix-data-spark-2/index.html
+[3]: https://www.ibm.com/developerworks/opensource/library/ba-offloading-informix-data-spark-3/index.html
+[4]: https://www.ibm.com/developerworks/opensource/library/ba-offloading-informix-data-spark-4/index.html
+[5]: https://www.ibm.com/developerworks/opensource/library/ba-offloading-informix-data-spark-5/index.html
+
+
