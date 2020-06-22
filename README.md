@@ -2,6 +2,8 @@
 
 Illustrates how to transfer IBM Informix data to Apache Spark using JDBC, and more.
 
+Update to support Apache Spark v3.0.0.
+
 This code is support to a series of articles on IBM's developerWorks:
 * [https://www.ibm.com/developerworks/library/ba-offloading-informix-data-spark/index.html][1]
 
@@ -67,3 +69,8 @@ All code is in the net.jgp.labs.informix2spark.l5xx packages.
 [5]: https://www.ibm.com/developerworks/opensource/library/ba-offloading-informix-data-spark-5/index.html
 
 
+---
+
+Learn more about Apache Spark by reading [Spark in Action, 2e](http://jgp.net/sia), please share the <3!
+Follow and ping me on Twitter to get updates about the book, Apache Spark, and (opinionated) views about software and data engineering: [@jgperrin](https://twitter.com/jgperrin). 
+Join the book's community on [Facebook](https://www.facebook.com/SparkInAction/) or in [Manning's live book and community site](https://livebook.manning.com/#!/book/spark-in-action-second-edition?a_aid=jgp).
